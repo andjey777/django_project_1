@@ -1,0 +1,29 @@
+{% extends 'comp/bootstrap1.html' %}
+
+{% block content %}
+
+<html>
+
+<head>
+    <title>Main Page</title>
+</head>
+
+<body>
+    <h2>Choose Components</h2>
+    <h5>Choose Component Type That You Want To Find:</h5>
+    <a href="{% url 'ram' %}" class="btn btn-primary">RAM</a>
+    <a href="{% url 'processor' %}" class="btn btn-primary">Processor</a>
+    <a href="{% url 'grcard' %}" class="btn btn-primary">Graphics Card</a>
+    <a href="{% url 'motherboard' %}" class="btn btn-primary">Motherboard</a>
+    <a href="{% url 'builder' %}" class="btn btn-primary">PC Builder</a><br><br>
+    <h2 class="pt-3">View All Components Information</h2>
+    <h5>You Can View Information Of All Existing Componetns In System Here:</h5>
+    <a href="{% url 'info' %}" class="btn btn-primary">View All Components</a><br><br>
+    <h2 class="pt-3">Recomendations</h2>
+    <h5>View Recomendations Based On Other User's Choices:</h5>
+    <a href="{% url 'recom' %}" class="btn btn-primary">Recommendations</a>
+</body>
+
+</html>
+
+{% endblock %}

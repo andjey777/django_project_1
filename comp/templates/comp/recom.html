@@ -1,0 +1,49 @@
+{% extends 'comp/bootstrap1.html' %}
+
+{% block content %}
+
+<html>
+
+<head>
+    <title>Most Popular</title>
+</head>
+
+<body>
+    <h2>Most Chosen Components</h2>
+    <form method="post">
+        {% csrf_token %}
+        <select name="drop">
+            <option selected="selected" disabled>Component Type</option>
+            <option value="RAM">RAM</option>
+            <option value="Processor">Processor</option>
+            <option value="GrapCard">Graphic Card</option>
+            <option value="Motherboard">Motherboard</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Output</button>
+    </form>
+    <table class="table table-striped caption-top">
+        <caption></caption>
+        <thead class="thead-dark">
+            <tr>
+                {% for item in fields %}
+                <th>
+                    {{ item }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in model %}
+            <tr>
+                {% for k, v in item.items %}
+                <th>{{ v }}</th>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>
+
+{% endblock %}

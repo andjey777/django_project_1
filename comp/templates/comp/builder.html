@@ -1,0 +1,131 @@
+{% extends 'comp/bootstrap1.html' %}
+
+{% block content %}
+
+<html>
+
+<head>
+    <title>Builder</title>
+</head>
+
+<body>
+    <h2 class="pt-3">Select Wanted Characteristics</h2>
+    <form class="pt-3" method="post">
+        {% csrf_token %}
+        <h3 class="pt-3">Processor</h3>
+        <p><label for="proc_c">Amount of Cores</label><input id="proc_c" name="proc_cores" required></p>
+        <p><label for="proc_fr">Frequency, GHz</label><input id="proc_fr" name="proc_freq" required></p>
+        <h3 class="pt-3">RAM</h3>
+        <p><label for="ram_c">Capacity, GB</label><input id="ram_c" name="ram_cap" required></p>
+        <p><label for="ram_fr">Frequency, GHz</label><input id="ram_fr" name="ram_freq" required></p>
+        <h3 class="pt-3">Graphics Card</h3>
+        <p><label for="gr_c">Video Memory, GB</label><input id="c" name="vid_mem" required></p>
+        <p><label for="gr_fr">Graphic Processor Frequency, GHz</label><input id="gr_fr" name="grFreq" required></p>
+        <p><label for="gr_fr">Effective Memory Frequency, GHz</label><input id="gr_fr" name="memFreq" required></p>
+        <h3 class="pt-3">Motherboard</h3>
+        <p>Socket
+            <select name="socket_sel">
+                {% for item in socket %}
+                <option value="{{ item.name }}" name="socket">{{ item.name }} </option>
+                {% endfor %}
+            </select>
+            <br></p>
+            <p>Memory Type
+            <select name="mem_sel">
+                {% for item in mem_type %}
+                <option value="{{ item.name }}" name="mem">{{ item.name }} </option>
+                {% endfor %}
+            </select></p>
+            <p><label for="max_mem">Max Memory, GB</label><input id="max_mem" name="max_memory" required></p>
+        <button class="btn btn-primary" type="submit">Calculate</button>
+    </form>
+    <h2 class="pt-3">Results:</h2>
+    <h3 class="pt-3">Processor</h3>
+    <table class="table table-striped caption-top">
+        <thead class="thead-dark">
+            <tr>
+                {% for item in proc_fields %}
+                <th>
+                    {{ item }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in proc_res %}
+            <tr>
+                {% for k, v in item.items %}
+                <th>{{ v }}</th>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>    
+    <h3 class="pt-3">RAM</h3>
+    <table class="table table-striped caption-top">
+        <thead class="thead-dark">
+            <tr>
+                {% for item in ram_fields %}
+                <th>
+                    {{ item }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in ram_res %}
+            <tr>
+                {% for k, v in item.items %}
+                <th>{{ v }}</th>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3 class="pt-3">Motherboard</h3>
+    <table class="table table-striped caption-top">
+        <thead class="thead-dark">
+            <tr>
+                {% for item in mb_fields %}
+                <th>
+                    {{ item }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in mb_res %}
+            <tr>
+                {% for k, v in item.items %}
+                <th>{{ v }}</th>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3 class="pt-3">Graphics Card</h3>
+    <table class="table table-striped caption-top">
+        <thead class="thead-dark">
+            <tr>
+                {% for item in gr_fields %}
+                <th>
+                    {{ item }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in gr_res %}
+            <tr>
+                {% for k, v in item.items %}
+                <th>{{ v }}</th>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>
+
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'comp/bootstrap1.html' %}
+
+{% block content %}
+
+<html>
+
+<head>
+    <title>Register</title>
+</head>
+
+<body>
+    <form method="post">
+        {% csrf_token %}
+        {% for f in form %}
+        <p><label class="form-label" >{{f.label}}: </label>{{ f }}</p>
+        <div class="form-error">{{ f.errors }}</div>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">Register</button>
+    </form>
+</body>
+
+</html>
+
+{% endblock %}

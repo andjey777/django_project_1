@@ -1,0 +1,58 @@
+{% extends 'comp/bootstrap1.html' %}
+
+{% block content %}
+
+<html>
+
+<head>
+    <title>Choose Processor</title>
+</head>
+
+<body>
+    <h2>Choose Components</h2>
+    <a href="{% url 'ram' %}" class="btn btn-primary">RAM</a>
+    <a href="{% url 'processor' %}" class="btn btn-primary">Processor</a>
+    <a href="{% url 'grcard' %}" class="btn btn-primary">Graphics Card</a>
+    <a href="{% url 'motherboard' %}" class="btn btn-primary">Motherboard</a><br>
+    <h2 class="pt-3">Select Wanted Characteristics</h2>
+    <form class="pt-3" method="post">
+        {% csrf_token %}
+        <p><label for="c">Amount of Cores</label><input id="c" name="cores" required></p>
+        <p><label for="fr">Frequency, GHz</label><input id="fr" name="freq" required></p>
+        <p>Socket
+            <select name="socket_sel">
+                <option value="none" name="none">Not specified</option>
+                {% for item in socket %}
+                <option value="{{ item.name }}" name="socket">{{ item.name }} </option>
+                {% endfor %}
+            </select>
+            <br>
+        </p>
+        <button class="btn btn-primary" type="submit">Calculate</button>
+    </form>
+    <table class="table table-striped caption-top">
+        <caption></caption>
+        <thead class="thead-dark">
+            <tr>
+                {% for item in fields %}
+                <th>
+                    {{ item }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in res %}
+            <tr>
+                {% for k, v in item.items %}
+                <th>{{ v }}</th>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>
+
+{% endblock %}
