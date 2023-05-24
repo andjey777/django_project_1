@@ -1,25 +1,20 @@
 import datetime
-from django.apps import apps
 from django.db.models import F, Case, When
-from django.shortcuts import render, redirect
-from django.urls import reverse_lazy
+from django.shortcuts import render
 from django.views import *
-from django.views.generic import UpdateView
+from .models import History
 from .models import *
 from django.contrib.auth.models import User
-from .forms import ChangePassForm, RAMForm, UserRegisterForm, UserLoginForm, UserUpdateForm
-from django.views.generic.edit import CreateView
-from django.contrib.auth.views import LoginView, PasswordChangeView
-from django.contrib.auth import logout, login
 
 # Create your views here.
+
 
 class Recommend(View):
     template_name = 'comp/recom.html'
 
     def get(self, request):
         return render(request, self.template_name)
-    
+
     def post(self, request):
         option = request.POST['drop']
         if option == 'RAM':
@@ -38,7 +33,8 @@ class Recommend(View):
         if option == 'Motherboard':
             query = Motherboard.objects.select_related('memory_type', 'soket').values(
                 'name', 'chipset', 'memory_type__name', 'socket__name', 'max_memory').order_by('-recomend')[:10]
-            fields = ['Name', 'Chipset', 'Memory Type', 'Socket', 'Max Memory(GHz)']
+            fields = ['Name', 'Chipset', 'Memory Type',
+                      'Socket', 'Max Memory(GHz)']
         lst = list(query)
         dict = {
             'model': lst,
@@ -47,123 +43,150 @@ class Recommend(View):
         return render(request, self.template_name, dict)
 
 
-def GetGrCard(request):
-    dict = {}
-    if request.method == 'POST':
-        cap = int(request.POST['vid_mem'])
-        grFreq = int(request.POST['grFreq'])
-        memFreq = int(request.POST['memFreq'])
-        param = [cap, grFreq, memFreq]
-        fields = ['Name', 'Video Memory(GB)',
-                  'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
-        res = Calculate(param, list(
-            GrapCard.objects.values_list('id', 'video_memory', 'proc_frequency', 'effective_mem_freq')))
-        preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(res)])
-        queryset = list(GrapCard.objects.filter(pk__in=res).order_by(preserved).values(
-            'name', 'video_memory', 'proc_frequency', 'effective_mem_freq'))
-        if len(res) != 0:
-            inc = GrapCard.objects.get(pk=res[0])
-            inc.recomend = F('recomend') + 1
-            inc.save()
-        dict = {
-            'res': queryset,
-            'fields': fields
-        }
-        SaveToDB('GrapCard', res, request)
-    return render(request, 'comp/grCard.html', dict)
+class GetGrCard(View):
+    template_name = 'comp/grCard.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            cap = int(request.POST['vid_mem'])
+            grFreq = int(request.POST['grFreq'])
+            memFreq = int(request.POST['memFreq'])
+            param = [cap, grFreq, memFreq]
+            fields = ['Name', 'Video Memory(GB)',
+                      'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
+            res = Calculate(param, list(
+                GrapCard.objects.values_list('id', 'video_memory', 'proc_frequency', 'effective_mem_freq')))
+            preserved = Case(*[When(pk=pk, then=pos)
+                               for pos, pk in enumerate(res)])
+            queryset = list(GrapCard.objects.filter(pk__in=res).order_by(preserved).values(
+                'name', 'video_memory', 'proc_frequency', 'effective_mem_freq'))
+            if len(res) != 0:
+                inc = GrapCard.objects.get(pk=res[0])
+                inc.recomend = F('recomend') + 1
+                inc.save()
+            dict = {
+                'res': queryset,
+                'fields': fields
+            }
+            if len(queryset) > 0:
+                SaveToDB('GrapCard', res, request)
+        return render(request, self.template_name, dict)
 
 
-def GetProc(request):
+class GetProc(View):
+    template_name = 'comp/proc.html'
     dict = {}
-    if request.method == 'POST':
-        cap = int(request.POST['cores'])
-        freq = int(request.POST['freq'])
-        socket = request.POST['socket_sel']
-        param = [cap, freq]
-        fields = ['Name', 'Cores', 'Frequency(GHz)', 'Socket']
-        if socket == 'none':
-            res = Calculate(param, list(
-                Processor.objects.values_list('id', 'cores', 'frequency')))
-        else:
-            res = Calculate(param, list(
-                Processor.objects.filter(
-            socket__name=socket).values_list('id', 'cores', 'frequency')))
-        preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(res)])
-        queryset = list(Processor.objects.filter(pk__in=res).order_by(preserved).select_related(
-            'socket').values('name', 'cores', 'frequency', 'socket__name'))
-        if len(res) != 0:
-            inc = Processor.objects.get(pk=res[0])
-            inc.recomend = F('recomend') + 1
-            inc.save()
-        dict = {
-            'res': queryset,
-            'fields': fields
-        }
-        SaveToDB('Processor', res, request)
     dict['socket'] = list(Socket.objects.values('name'))
-    return render(request, 'comp/proc.html', dict)
+
+    def get(self, request):
+        return render(request, self.template_name, self.dict)
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            cap = int(request.POST['cores'])
+            freq = int(request.POST['freq'])
+            socket = request.POST['socket_sel']
+            param = [cap, freq]
+            fields = ['Name', 'Cores', 'Frequency(GHz)', 'Socket']
+            if socket == 'none':
+                res = Calculate(param, list(
+                    Processor.objects.values_list('id', 'cores', 'frequency')))
+            else:
+                res = Calculate(param, list(
+                    Processor.objects.filter(
+                        socket__name=socket).values_list('id', 'cores', 'frequency')))
+            preserved = Case(*[When(pk=pk, then=pos)
+                               for pos, pk in enumerate(res)])
+            queryset = list(Processor.objects.filter(pk__in=res).order_by(preserved).select_related(
+                'socket').values('name', 'cores', 'frequency', 'socket__name'))
+            if len(res) != 0:
+                inc = Processor.objects.get(pk=res[0])
+                inc.recomend = F('recomend') + 1
+                inc.save()
+            dict = {
+                'res': queryset,
+                'fields': fields
+            }
+            if len(queryset) > 0:
+                SaveToDB('Processor', res, request)
+        return render(request, self.template_name, dict | self.dict)
 
 
-def GetRam(request):
+class GetRam(View):
+    template_name = 'comp/ram.html'
     dict = {}
-    if request.method == 'POST' and request.user.is_authenticated:
-        cap = int(request.POST['cap'])
-        freq = int(request.POST['freq'])
-        mem_type = request.POST['mem_sel']
-        param = [cap, freq]
-        fields = ['Name', 'Capacity(GB)', 'Frequency(GHz)', 'Memory Type']
-        if mem_type == 'none':
-            res = Calculate(param, list(
-                RAM.objects.values_list('id', 'capacity', 'frequency')))
-        else:
-            res = Calculate(param, list(
-                RAM.objects.filter(
-            memory_type__name=mem_type).values_list('id', 'capacity', 'frequency')))
-        preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(res)])
-        queryset = list(RAM.objects.filter(pk__in=res).order_by(preserved).select_related(
-            'memory_type').values('name', 'capacity', 'frequency', 'memory_type__name'))
-        if len(res) != 0:
-            inc = RAM.objects.get(pk=res[0])
-            inc.recomend = F('recomend') + 1
-            inc.save()
-        dict = {
-            'res': queryset,
-            'fields': fields
-        }
-        SaveToDB('RAM', res, request)
     dict['mem_type'] = list(MemoryType.objects.values('name'))
-    return render(request, 'comp/ram.html', dict)
+
+    def get(self, request):
+        return render(request, self.template_name, self.dict)
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            cap = int(request.POST['cap'])
+            freq = int(request.POST['freq'])
+            mem_type = request.POST['mem_sel']
+            param = [cap, freq]
+            fields = ['Name', 'Capacity(GB)', 'Frequency(GHz)', 'Memory Type']
+            if mem_type == 'none':
+                res = Calculate(param, list(
+                    RAM.objects.values_list('id', 'capacity', 'frequency')))
+            else:
+                res = Calculate(param, list(
+                    RAM.objects.filter(
+                        memory_type__name=mem_type).values_list('id', 'capacity', 'frequency')))
+            preserved = Case(*[When(pk=pk, then=pos)
+                               for pos, pk in enumerate(res)])
+            queryset = list(RAM.objects.filter(pk__in=res).order_by(preserved).select_related(
+                'memory_type').values('name', 'capacity', 'frequency', 'memory_type__name'))
+            if len(res) != 0:
+                inc = RAM.objects.get(pk=res[0])
+                inc.recomend = F('recomend') + 1
+                inc.save()
+            dict = {
+                'res': queryset,
+                'fields': fields
+            }
+            if len(queryset) > 0:
+                SaveToDB('RAM', res, request)
+        return render(request, self.template_name, dict | self.dict)
 
 
-def GetMotherboard(request):
+class GetMotherboard(View):
+    template_name = 'comp/motherboard.html'
     dict = {}
-    if request.method == 'POST' and request.user.is_authenticated:
-        socket = request.POST['socket_sel']
-        mem_type = request.POST['mem_sel']
-        max_mem = int(request.POST['max_memory'])
-        param = [max_mem]
-        fields = ['Name', 'Socket', 'Memory Type', 'Max Memory(GB)']
-        res = Calculate(param, list(Motherboard.objects.filter(
-            socket__name=socket, memory_type__name=mem_type).values_list('id', 'max_memory')))
-        preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(res)])
-        queryset = list(Motherboard.objects.filter(pk__in=res).order_by(preserved).select_related(
-            'memory_type', 'socket').values('name', 'socket__name', 'memory_type__name', 'max_memory'))
-        if len(res) != 0:
-            inc = Motherboard.objects.get(pk=res[0])
-            inc.recomend = F('recomend') + 1
-            inc.save()
-        dict = {
-            'res': queryset,
-            'fields': fields
-        }
-        SaveToDB('Motherboard', res, request)
     dict['socket'] = list(Socket.objects.values('name'))
     dict['mem_type'] = list(MemoryType.objects.values('name'))
-    return render(request, 'comp/motherboard.html', dict)
+
+    def get(self, request):
+        return render(request, self.template_name, self.dict)
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            socket = request.POST['socket_sel']
+            mem_type = request.POST['mem_sel']
+            max_mem = int(request.POST['max_memory'])
+            param = [max_mem]
+            fields = ['Name', 'Socket', 'Memory Type', 'Max Memory(GB)']
+            res = Calculate(param, list(Motherboard.objects.filter(
+                socket__name=socket, memory_type__name=mem_type).values_list('id', 'max_memory')))
+            preserved = Case(*[When(pk=pk, then=pos)
+                               for pos, pk in enumerate(res)])
+            queryset = list(Motherboard.objects.filter(pk__in=res).order_by(preserved).select_related(
+                'memory_type', 'socket').values('name', 'socket__name', 'memory_type__name', 'max_memory'))
+            if len(res) != 0:
+                inc = Motherboard.objects.get(pk=res[0])
+                inc.recomend = F('recomend') + 1
+                inc.save()
+            dict = {
+                'res': queryset,
+                'fields': fields
+            }
+            if len(queryset) > 0:
+                SaveToDB('Motherboard', res, request)
+        return render(request, self.template_name, dict | self.dict)
 
 
 def SaveToDB(model, ids, request):
@@ -202,7 +225,7 @@ class OutputInfo(View):
 
     def get(self, request):
         return render(request, self.templtae_name)
-    
+
     def post(self, request):
         option = request.POST['drop']
         if option == 'RAM':
@@ -221,7 +244,8 @@ class OutputInfo(View):
         elif option == 'Motherboard':
             query = Motherboard.objects.select_related('memory_type', 'soket').values(
                 'name', 'chipset', 'memory_type__name', 'socket__name', 'max_memory')
-            fields = ['Name', 'Cores', 'Memory Type', 'Socket', 'Max Memory(GB)']
+            fields = ['Name', 'Cores', 'Memory Type',
+                      'Socket', 'Max Memory(GB)']
         lst = list(query)
         dict = {
             'model': lst,
@@ -229,51 +253,6 @@ class OutputInfo(View):
         }
         return render(request, self.templtae_name, dict)
 
-
-class HistoryView(View):
-    template_name = 'comp/history.html'
-
-    def get(self, request):
-        if request.user.is_authenticated:
-            val = []
-            his = []
-            field = []
-            date = []
-            us = User.objects.filter(id=request.user.id).get()
-            d = History.objects.filter(user_id=us).values('result', 'comp_type', 'date').order_by('-date')
-            data = list(d)
-            for item in data:
-                lst = item['result'].split(' ')
-                model_name = apps.get_model('comp', item['comp_type'])
-                if item['comp_type'] == 'RAM':
-                    val = ['name', 'capacity', 'frequency', 'memory_type__name']
-                    fields = ['Name', 'Capacity', 'Frequency', 'Memory Type']
-                elif item['comp_type'] == 'Processor':
-                    val = ['name', 'cores', 'frequency', 'socket__name']
-                    fields = ['Name', 'Cores', 'Frequency', 'Socket']
-                elif item['comp_type'] == 'GrapCard':
-                    val = ['name', 'video_memory',
-                        'proc_frequency', 'effective_mem_freq']
-                    fields = ['Name', 'Video Memory(GB)',
-                            'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
-                elif item['comp_type'] == 'Motherboard':
-                    val = ['name', 'socket__name',
-                        'memory_type__name', 'max_memory']
-                    fields = ['Name', 'Socket',
-                            'Memory Type', 'Max Memory(GB)']
-                preserved = Case(*[When(pk=pk, then=pos)
-                                for pos, pk in enumerate(lst)])
-                queryset = list(model_name.objects.filter(
-                    pk__in=lst).order_by(preserved).values(*val))
-                his.append(queryset)
-                field.append(fields)
-                date.append(item['date'])
-            fin_list = zip(his, field, date)
-            dict = {
-                'data': fin_list,
-                'fields': field
-            }
-        return render(request, self.template_name, dict)
 
 class BuilderView(View):
     template_name = 'comp/builder.html'
@@ -283,10 +262,10 @@ class BuilderView(View):
 
     def get(self, request):
         return render(request, self.template_name, self.dict)
-    
+
     def post(self, request):
         if request.user.is_authenticated:
-            #Motherboard
+            # Motherboard
             socket = request.POST['socket_sel']
             mem_type = request.POST['mem_sel']
             mb_param = [int(request.POST['max_memory'])]
@@ -294,35 +273,39 @@ class BuilderView(View):
             mb_res = Calculate(mb_param, list(Motherboard.objects.filter(
                 socket__name=socket, memory_type__name=mem_type).values_list('id', 'max_memory')))
             mb_preserved = Case(*[When(pk=pk, then=pos)
-                            for pos, pk in enumerate(mb_res)])
+                                  for pos, pk in enumerate(mb_res)])
             mb_queryset = list(Motherboard.objects.filter(pk__in=mb_res).order_by(mb_preserved).select_related(
                 'memory_type', 'socket').values('name', 'socket__name', 'memory_type__name', 'max_memory'))
-            #RAM
-            ram_param = [int(request.POST['ram_cap']), int(request.POST['ram_freq'])]
-            ram_fields = ['Name', 'Capacity(GB)', 'Frequency(GHz)', 'Memory Type']
+            # RAM
+            ram_param = [int(request.POST['ram_cap']),
+                         int(request.POST['ram_freq'])]
+            ram_fields = [
+                'Name', 'Capacity(GB)', 'Frequency(GHz)', 'Memory Type']
             ram_res = Calculate(ram_param, list(
                 RAM.objects.filter(memory_type__name=mem_type).values_list('id', 'capacity', 'frequency')))
             ram_preserved = Case(*[When(pk=pk, then=pos)
-                            for pos, pk in enumerate(ram_res)])
+                                   for pos, pk in enumerate(ram_res)])
             ram_queryset = list(RAM.objects.filter(pk__in=ram_res).order_by(ram_preserved).select_related(
                 'memory_type').values('name', 'capacity', 'frequency', 'memory_type__name'))
-            #Proc
-            proc_param = [int(request.POST['proc_cores']), int(request.POST['proc_freq'])]
+            # Proc
+            proc_param = [int(request.POST['proc_cores']),
+                          int(request.POST['proc_freq'])]
             proc_fields = ['Name', 'Cores', 'Frequency(GHz)', 'Socket']
             proc_res = Calculate(proc_param, list(
                 Processor.objects.filter(socket__name=socket).values_list('id', 'cores', 'frequency')))
             proc_preserved = Case(*[When(pk=pk, then=pos)
-                            for pos, pk in enumerate(proc_res)])
+                                    for pos, pk in enumerate(proc_res)])
             proc_queryset = list(Processor.objects.filter(pk__in=proc_res).order_by(proc_preserved).select_related(
                 'socket').values('name', 'cores', 'frequency', 'socket__name'))
-            #Grap Card        
-            gr_param = [int(request.POST['vid_mem']), int(request.POST['grFreq']), int(request.POST['memFreq'])]
+            # Grap Card
+            gr_param = [int(request.POST['vid_mem']), int(
+                request.POST['grFreq']), int(request.POST['memFreq'])]
             gr_fields = ['Name', 'Video Memory(GB)',
-                    'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
+                         'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
             gr_res = Calculate(gr_param, list(
                 GrapCard.objects.values_list('id', 'video_memory', 'proc_frequency', 'effective_mem_freq')))
             gr_preserved = Case(*[When(pk=pk, then=pos)
-                            for pos, pk in enumerate(gr_res)])
+                                  for pos, pk in enumerate(gr_res)])
             gr_queryset = list(GrapCard.objects.filter(pk__in=gr_res).order_by(gr_preserved).values(
                 'name', 'video_memory', 'proc_frequency', 'effective_mem_freq'))
             dict = {
@@ -336,49 +319,6 @@ class BuilderView(View):
                 'mb_res': mb_queryset
             }
         return render(request, self.template_name, dict | self.dict)
-
-
-class UpdateUser(UpdateView):
-    form_class = UserUpdateForm
-    template_name = 'comp/update_user.html'
-    success_url = reverse_lazy('edit_profile')
-
-    def get_object(self):
-        return self.request.user
-
-
-class PassChangeView(PasswordChangeView):
-    form_class = ChangePassForm
-    success_url = reverse_lazy('edit_success')
-    template_name = 'comp/pass_change.html'
-
-
-def PassEditSuccess(request):
-    return render(request, 'comp/edit_success.html')
-
-
-class RegisterUser(CreateView):
-    form_class = UserRegisterForm
-    template_name = 'comp/register.html'
-    success_url = reverse_lazy('login')
-
-    def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)
-        return redirect('home')
-
-
-class LoginUser(LoginView):
-    form_class = UserLoginForm
-    template_name = 'comp/login.html'
-
-    def get_success_url(self):
-        return reverse_lazy('home')
-
-
-def LogoutUser(request):
-    logout(request)
-    return redirect('login')
 
 
 def MainView(request):
