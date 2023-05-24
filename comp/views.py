@@ -3,6 +3,7 @@ from django.apps import apps
 from django.db.models import F, Case, When
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
+from django.views import *
 from django.views.generic import UpdateView
 from .models import *
 from django.contrib.auth.models import User
@@ -13,34 +14,37 @@ from django.contrib.auth import logout, login
 
 # Create your views here.
 
+class Recommend(View):
+    template_name = 'comp/recom.html'
 
-def Recommend(request):
-    dict = {}
-    if request.method == 'POST':
+    def get(self, request):
+        return render(request, self.template_name)
+    
+    def post(self, request):
         option = request.POST['drop']
         if option == 'RAM':
             query = RAM.objects.select_related('memory_type').values(
-                'name', 'capacity', 'frequency', 'memory_type__name').order_by('recomend')[:10]
+                'name', 'capacity', 'frequency', 'memory_type__name').order_by('-recomend')[:10]
             fields = ['Name', 'Capacity(GB)', 'Frequency(GHz)', 'Memory Type']
         if option == 'Processor':
             query = Processor.objects.select_related('socket').values(
-                'name', 'cores', 'frequency', 'socket__name').order_by('recomend')[:10]
+                'name', 'cores', 'frequency', 'socket__name').order_by('-recomend')[:10]
             fields = ['Name', 'Cores', 'Frequency(GHz)', 'Socket']
         if option == 'GrapCard':
             query = GrapCard.objects.values(
-                'name', 'video_memory', 'proc_frequency', 'effective_mem_freq').order_by('recomend')[:10]
+                'name', 'video_memory', 'proc_frequency', 'effective_mem_freq').order_by('-recomend')[:10]
             fields = ['Name', 'Video Memory(GB)',
                       'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
         if option == 'Motherboard':
             query = Motherboard.objects.select_related('memory_type', 'soket').values(
-                'name', 'chipset', 'memory_type__name', 'socket__name', 'max_memory').order_by('recomend')[:10]
+                'name', 'chipset', 'memory_type__name', 'socket__name', 'max_memory').order_by('-recomend')[:10]
             fields = ['Name', 'Chipset', 'Memory Type', 'Socket', 'Max Memory(GHz)']
         lst = list(query)
         dict = {
             'model': lst,
             'fields': fields
         }
-    return render(request, 'comp/recom.html', dict)
+        return render(request, self.template_name, dict)
 
 
 def GetGrCard(request):
@@ -193,9 +197,13 @@ def Calculate(param, lis):
     return result
 
 
-def OutputInfo(request):
-    dict = {}
-    if request.method == 'POST':
+class OutputInfo(View):
+    templtae_name = 'comp/info.html'
+
+    def get(self, request):
+        return render(request, self.templtae_name)
+    
+    def post(self, request):
         option = request.POST['drop']
         if option == 'RAM':
             query = RAM.objects.select_related('memory_type').values(
@@ -219,107 +227,115 @@ def OutputInfo(request):
             'model': lst,
             'fields': fields
         }
-    return render(request, 'comp/info.html', dict)
+        return render(request, self.templtae_name, dict)
 
 
-def HistoryView(request):
-    if request.user.is_authenticated:
-        val = []
-        his = []
-        field = []
-        date = []
-        us = User.objects.filter(id=request.user.id).get()
-        d = History.objects.filter(user_id=us).values('result', 'comp_type', 'date').order_by('-date')
-        data = list(d)
-        for item in data:
-            lst = item['result'].split(' ')
-            model_name = apps.get_model('comp', item['comp_type'])
-            if item['comp_type'] == 'RAM':
-                val = ['name', 'capacity', 'frequency', 'memory_type__name']
-                fields = ['Name', 'Capacity', 'Frequency', 'Memory Type']
-            elif item['comp_type'] == 'Processor':
-                val = ['name', 'cores', 'frequency', 'socket__name']
-                fields = ['Name', 'Cores', 'Frequency', 'Socket']
-            elif item['comp_type'] == 'GrapCard':
-                val = ['name', 'video_memory',
-                       'proc_frequency', 'effective_mem_freq']
-                fields = ['Name', 'Video Memory(GB)',
-                          'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
-            elif item['comp_type'] == 'Motherboard':
-                val = ['name', 'socket__name',
-                       'memory_type__name', 'max_memory']
-                fields = ['Name', 'Socket',
-                          'Memory Type', 'Max Memory(GB)']
-            preserved = Case(*[When(pk=pk, then=pos)
-                               for pos, pk in enumerate(lst)])
-            queryset = list(model_name.objects.filter(
-                pk__in=lst).order_by(preserved).values(*val))
-            his.append(queryset)
-            field.append(fields)
-            date.append(item['date'])
-        fin_list = zip(his, field, date)
-        dict = {
-            'data': fin_list,
-            'fields': field
-        }
-    return render(request, 'comp/history.html', dict)
+class HistoryView(View):
+    template_name = 'comp/history.html'
 
+    def get(self, request):
+        if request.user.is_authenticated:
+            val = []
+            his = []
+            field = []
+            date = []
+            us = User.objects.filter(id=request.user.id).get()
+            d = History.objects.filter(user_id=us).values('result', 'comp_type', 'date').order_by('-date')
+            data = list(d)
+            for item in data:
+                lst = item['result'].split(' ')
+                model_name = apps.get_model('comp', item['comp_type'])
+                if item['comp_type'] == 'RAM':
+                    val = ['name', 'capacity', 'frequency', 'memory_type__name']
+                    fields = ['Name', 'Capacity', 'Frequency', 'Memory Type']
+                elif item['comp_type'] == 'Processor':
+                    val = ['name', 'cores', 'frequency', 'socket__name']
+                    fields = ['Name', 'Cores', 'Frequency', 'Socket']
+                elif item['comp_type'] == 'GrapCard':
+                    val = ['name', 'video_memory',
+                        'proc_frequency', 'effective_mem_freq']
+                    fields = ['Name', 'Video Memory(GB)',
+                            'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
+                elif item['comp_type'] == 'Motherboard':
+                    val = ['name', 'socket__name',
+                        'memory_type__name', 'max_memory']
+                    fields = ['Name', 'Socket',
+                            'Memory Type', 'Max Memory(GB)']
+                preserved = Case(*[When(pk=pk, then=pos)
+                                for pos, pk in enumerate(lst)])
+                queryset = list(model_name.objects.filter(
+                    pk__in=lst).order_by(preserved).values(*val))
+                his.append(queryset)
+                field.append(fields)
+                date.append(item['date'])
+            fin_list = zip(his, field, date)
+            dict = {
+                'data': fin_list,
+                'fields': field
+            }
+        return render(request, self.template_name, dict)
 
-def BuilderView(request):
+class BuilderView(View):
+    template_name = 'comp/builder.html'
     dict = {}
-    if request.method == 'POST' and request.user.is_authenticated:
-        #Motherboard
-        socket = request.POST['socket_sel']
-        mem_type = request.POST['mem_sel']
-        mb_param = [int(request.POST['max_memory'])]
-        mb_fields = ['Name', 'Socket', 'Memory Type', 'Max Memory(GB)']
-        mb_res = Calculate(mb_param, list(Motherboard.objects.filter(
-            socket__name=socket, memory_type__name=mem_type).values_list('id', 'max_memory')))
-        mb_preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(mb_res)])
-        mb_queryset = list(Motherboard.objects.filter(pk__in=mb_res).order_by(mb_preserved).select_related(
-            'memory_type', 'socket').values('name', 'socket__name', 'memory_type__name', 'max_memory'))
-        #RAM
-        ram_param = [int(request.POST['ram_cap']), int(request.POST['ram_freq'])]
-        ram_fields = ['Name', 'Capacity(GB)', 'Frequency(GHz)', 'Memory Type']
-        ram_res = Calculate(ram_param, list(
-            RAM.objects.filter(memory_type__name=mem_type).values_list('id', 'capacity', 'frequency')))
-        ram_preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(ram_res)])
-        ram_queryset = list(RAM.objects.filter(pk__in=ram_res).order_by(ram_preserved).select_related(
-            'memory_type').values('name', 'capacity', 'frequency', 'memory_type__name'))
-        #Proc
-        proc_param = [int(request.POST['proc_cores']), int(request.POST['proc_freq'])]
-        proc_fields = ['Name', 'Cores', 'Frequency(GHz)', 'Socket']
-        proc_res = Calculate(proc_param, list(
-            Processor.objects.filter(socket__name=socket).values_list('id', 'cores', 'frequency')))
-        proc_preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(proc_res)])
-        proc_queryset = list(Processor.objects.filter(pk__in=proc_res).order_by(proc_preserved).select_related(
-            'socket').values('name', 'cores', 'frequency', 'socket__name'))
-        #Grap Card        
-        gr_param = [int(request.POST['vid_mem']), int(request.POST['grFreq']), int(request.POST['memFreq'])]
-        gr_fields = ['Name', 'Video Memory(GB)',
-                  'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
-        gr_res = Calculate(gr_param, list(
-            GrapCard.objects.values_list('id', 'video_memory', 'proc_frequency', 'effective_mem_freq')))
-        gr_preserved = Case(*[When(pk=pk, then=pos)
-                         for pos, pk in enumerate(gr_res)])
-        gr_queryset = list(GrapCard.objects.filter(pk__in=gr_res).order_by(gr_preserved).values(
-            'name', 'video_memory', 'proc_frequency', 'effective_mem_freq'))
-        dict = {
-            'gr_fields': gr_fields,
-            'proc_fields': proc_fields,
-            'ram_fields': ram_fields,
-            'mb_fields': mb_fields,
-            'gr_res': gr_queryset,
-            'proc_res': proc_queryset,
-            'ram_res': ram_queryset,
-            'mb_res': mb_queryset
-        }
     dict['socket'] = list(Socket.objects.values('name'))
     dict['mem_type'] = list(MemoryType.objects.values('name'))
-    return render(request, 'comp/builder.html', dict)
+
+    def get(self, request):
+        return render(request, self.template_name, self.dict)
+    
+    def post(self, request):
+        if request.user.is_authenticated:
+            #Motherboard
+            socket = request.POST['socket_sel']
+            mem_type = request.POST['mem_sel']
+            mb_param = [int(request.POST['max_memory'])]
+            mb_fields = ['Name', 'Socket', 'Memory Type', 'Max Memory(GB)']
+            mb_res = Calculate(mb_param, list(Motherboard.objects.filter(
+                socket__name=socket, memory_type__name=mem_type).values_list('id', 'max_memory')))
+            mb_preserved = Case(*[When(pk=pk, then=pos)
+                            for pos, pk in enumerate(mb_res)])
+            mb_queryset = list(Motherboard.objects.filter(pk__in=mb_res).order_by(mb_preserved).select_related(
+                'memory_type', 'socket').values('name', 'socket__name', 'memory_type__name', 'max_memory'))
+            #RAM
+            ram_param = [int(request.POST['ram_cap']), int(request.POST['ram_freq'])]
+            ram_fields = ['Name', 'Capacity(GB)', 'Frequency(GHz)', 'Memory Type']
+            ram_res = Calculate(ram_param, list(
+                RAM.objects.filter(memory_type__name=mem_type).values_list('id', 'capacity', 'frequency')))
+            ram_preserved = Case(*[When(pk=pk, then=pos)
+                            for pos, pk in enumerate(ram_res)])
+            ram_queryset = list(RAM.objects.filter(pk__in=ram_res).order_by(ram_preserved).select_related(
+                'memory_type').values('name', 'capacity', 'frequency', 'memory_type__name'))
+            #Proc
+            proc_param = [int(request.POST['proc_cores']), int(request.POST['proc_freq'])]
+            proc_fields = ['Name', 'Cores', 'Frequency(GHz)', 'Socket']
+            proc_res = Calculate(proc_param, list(
+                Processor.objects.filter(socket__name=socket).values_list('id', 'cores', 'frequency')))
+            proc_preserved = Case(*[When(pk=pk, then=pos)
+                            for pos, pk in enumerate(proc_res)])
+            proc_queryset = list(Processor.objects.filter(pk__in=proc_res).order_by(proc_preserved).select_related(
+                'socket').values('name', 'cores', 'frequency', 'socket__name'))
+            #Grap Card        
+            gr_param = [int(request.POST['vid_mem']), int(request.POST['grFreq']), int(request.POST['memFreq'])]
+            gr_fields = ['Name', 'Video Memory(GB)',
+                    'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
+            gr_res = Calculate(gr_param, list(
+                GrapCard.objects.values_list('id', 'video_memory', 'proc_frequency', 'effective_mem_freq')))
+            gr_preserved = Case(*[When(pk=pk, then=pos)
+                            for pos, pk in enumerate(gr_res)])
+            gr_queryset = list(GrapCard.objects.filter(pk__in=gr_res).order_by(gr_preserved).values(
+                'name', 'video_memory', 'proc_frequency', 'effective_mem_freq'))
+            dict = {
+                'gr_fields': gr_fields,
+                'proc_fields': proc_fields,
+                'ram_fields': ram_fields,
+                'mb_fields': mb_fields,
+                'gr_res': gr_queryset,
+                'proc_res': proc_queryset,
+                'ram_res': ram_queryset,
+                'mb_res': mb_queryset
+            }
+        return render(request, self.template_name, dict | self.dict)
 
 
 class UpdateUser(UpdateView):
