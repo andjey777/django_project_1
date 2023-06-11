@@ -12,8 +12,9 @@
     <a href="{% url 'edit_profile' %}" class="btn btn-primary">Your Profile</a>
     <a href="{% url 'home' %}" class="btn btn-primary">Home</a><br>
     <h2 class="py-3">Your Search History:</h2>
-    {% for item1, item2, item3 in data %}
-    <p class="pt-3">{{ item3 }}</p>
+    {% for item1, item2, item3, item4 in data %}
+    <h4 class="pt-3">{{ item4 }}</h4>
+    <p>{{ item3 }}</p>
     <table class="table table-striped caption-top">
         <thead class="thead-dark">
             <tr>

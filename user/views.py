@@ -13,6 +13,12 @@ from django.contrib.auth import logout, login
 
 # Create your views here.
 
+ram_fields = ['Name', 'Capacity', 'Frequency', 'Memory Type']
+proc_fields = ['Name', 'Cores', 'Frequency', 'Socket']
+gr_fields = ['Name', 'Video Memory(GB)', 'Graphic Processor Frequency(GHz)',
+             'Effective Memory Frequency(GHz)']
+mb_fields = ['Name', 'Chipset', 'Socket', 'Memory Type', 'Max Memory(GB)']
+
 
 class HistoryView(View):
     template_name = 'user/history.html'
@@ -23,6 +29,7 @@ class HistoryView(View):
             his = []
             field = []
             date = []
+            types = []
             us = User.objects.filter(id=request.user.id).get()
             d = History.objects.filter(user_id=us).values(
                 'result', 'comp_type', 'date').order_by('-date')
@@ -33,20 +40,22 @@ class HistoryView(View):
                 if item['comp_type'] == 'RAM':
                     val = ['name', 'capacity',
                            'frequency', 'memory_type__name']
-                    fields = ['Name', 'Capacity', 'Frequency', 'Memory Type']
+                    fields = ram_fields
+                    type = 'RAM'
                 elif item['comp_type'] == 'Processor':
                     val = ['name', 'cores', 'frequency', 'socket__name']
-                    fields = ['Name', 'Cores', 'Frequency', 'Socket']
+                    fields = proc_fields
+                    type = 'Processor'
                 elif item['comp_type'] == 'GrapCard':
                     val = ['name', 'video_memory',
                            'proc_frequency', 'effective_mem_freq']
-                    fields = ['Name', 'Video Memory(GB)',
-                              'Graphic Processor Frequency(GHz)', 'Effective Memory Frequency(GHz)']
+                    fields = gr_fields
+                    type = 'Graphics Card'
                 elif item['comp_type'] == 'Motherboard':
-                    val = ['name', 'socket__name',
+                    val = ['name', 'chipset', 'socket__name',
                            'memory_type__name', 'max_memory']
-                    fields = ['Name', 'Socket',
-                              'Memory Type', 'Max Memory(GB)']
+                    fields = mb_fields
+                    type = 'Motherboard'
                 preserved = Case(*[When(pk=pk, then=pos)
                                    for pos, pk in enumerate(lst)])
                 queryset = list(model_name.objects.filter(
@@ -54,7 +63,8 @@ class HistoryView(View):
                 his.append(queryset)
                 field.append(fields)
                 date.append(item['date'])
-            fin_list = zip(his, field, date)
+                types.append(type)
+            fin_list = zip(his, field, date, types)
             dict = {
                 'data': fin_list,
                 'fields': field
